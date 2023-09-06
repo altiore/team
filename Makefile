@@ -11,4 +11,6 @@ b: ## Создать бинарный файл из fc
 	npx func-js contracts/imports/stdlib.fc contracts/counter.fc --boc cells/counter.cell
 d: ## deploy
 	npx ts-node scripts/counter.deploy.ts
+burn: ## Burn
+	npx ts-node scripts/minter.burn.ts
 

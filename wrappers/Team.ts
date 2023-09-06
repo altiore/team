@@ -9,27 +9,23 @@ import {
     SendMode,
 } from 'ton-core';
 
-export type CounterConfig = {
-    initialValue: bigint;
-};
-
-export function configToDataCell(config: CounterConfig): Cell {
-    return beginCell()
-      .storeUint(config.initialValue, 64)
-      .endCell();
+interface TeamConfig {
+    sender: Address;
 }
 
-export class Counter implements Contract {
+export class Team implements Contract {
     constructor(readonly address: Address, readonly init?: { code: Cell; data: Cell }) {}
 
     static createFromAddress(address: Address) {
-        return new Counter(address);
+        return new Team(address);
     }
 
-    static createFromConfig(config: CounterConfig, code: Cell, workchain = 0) {
-        const data = configToDataCell(config);
+    static createFromConfig(config: TeamConfig, code: Cell, workchain = 0) {
+        const data = beginCell()
+          .storeAddress(config.sender)
+          .endCell();
         const init = { code, data };
-        return new Counter(contractAddress(workchain, init), init);
+        return new Team(contractAddress(workchain, init), init);
     }
 
     async sendDeploy(provider: ContractProvider, via: Sender) {
@@ -47,24 +43,24 @@ export class Counter implements Contract {
         });
     }
 
-    async getCounter(provider: ContractProvider): Promise<bigint> {
-        const result = await provider.get('counter', []);
-        return result.stack.readBigNumber();
-    }
-
-    async getOpCode(provider: ContractProvider): Promise<bigint> {
-        const result = await provider.get('get_op_code', []);
-        return result.stack.readBigNumber();
-    }
-
-    async sendIncrement(provider: ContractProvider, via: Sender) {
+    async sendRequestMembership(provider: ContractProvider, via: Sender) {
         const messageBody = beginCell()
-          .storeUint(1, 32) // op (op #1 = increment)
+          .storeUint(1, 32) // op (op #1 = request_membership)
           .storeUint(0, 64) // query id
           .endCell();
         await provider.internal(via, {
             value: "0.002", // send 0.002 TON for gas
             body: messageBody
         });
+    }
+
+    async getMembers(provider: ContractProvider): Promise<Cell> {
+        const result = await provider.get('get_members', []);
+        return result.stack.readCell();
+    }
+
+    async getOpCode(provider: ContractProvider): Promise<bigint> {
+        const result = await provider.get('get_op_codes', []);
+        return result.stack.readBigNumber();
     }
 }

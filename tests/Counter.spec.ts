@@ -43,4 +43,8 @@ describe('Counter', () => {
         expect(res).toEqual(0n);
     });
 
+    it('test op code', async () => {
+        expect(await counter.getOpCode()).toEqual(0);
+    })
+
 });

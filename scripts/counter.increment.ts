@@ -1,43 +1,28 @@
-import * as fs from "fs";
-
 import { getHttpEndpoint } from "@orbs-network/ton-access";
-import { TonClient, Cell, WalletContractV4 } from "ton";
+import { TonClient, WalletContractV4 } from "ton";
 import { mnemonicToWalletKey } from "ton-crypto";
 
 import {mnemonic} from '../vars';
-import {Counter} from "../wrappers/Counter";
+import { Counter } from "../wrappers/Counter";
+import { Address } from "ton-core";
 
-async function deploy() {
+async function increment() {
 	// initialize ton rpc client on testnet
 	const endpoint = await getHttpEndpoint({ network: "testnet" });
 	const client = new TonClient({ endpoint });
 
-	// prepare Counter's initial code and data cells for deployment
-	const counterCode = Cell.fromBoc(fs.readFileSync("./cells/counter.cell"))[0];
-
-	const initialCounterValue = Date.now(); // to avoid collisions use current number of milliseconds since epoch as initial value
-	const counter = Counter.createFromConfig({initialValue: BigInt(initialCounterValue)}, counterCode);
-
-	// exit if contract is already deployed
-	console.log("contract address:", counter.address.toString());
-	if (await client.isContractDeployed(counter.address)) {
-		return console.log("Counter already deployed");
-	}
-
 	const key = await mnemonicToWalletKey(mnemonic.split(" "));
 	const wallet = WalletContractV4.create({ publicKey: key.publicKey, workchain: 0 });
-	if (!await client.isContractDeployed(wallet.address)) {
-		return console.log("wallet is not deployed");
-	}
 
 	// open wallet and read the current seqno of the wallet
 	const walletContract = client.open(wallet);
 	const walletSender = walletContract.sender(key.secretKey);
 	const seqno = await walletContract.getSeqno();
 
-	// send the transaction (deploy)
+	const counterAddress = Address.parse('EQDDyG0gkODKEK9mO9YId1V42qD2yzzj1q5XRwrmtxbA2nh6');
+	const counter = Counter.createFromAddress(counterAddress);
 	const counterContract = client.open(counter);
-	await counterContract.sendDeploy(walletSender);
+	await counterContract.sendIncrement(walletSender);
 
 	// wait until confirmed
 	let currentSeqno = seqno;
@@ -49,7 +34,7 @@ async function deploy() {
 	console.log("deploy transaction confirmed!");
 }
 
-deploy();
+increment();
 
 function sleep(ms: number) {
 	return new Promise(resolve => setTimeout(resolve, ms));

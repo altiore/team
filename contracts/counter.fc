@@ -41,3 +41,9 @@ int counter() method_id {
     return counter;
 }
 
+int op::burn_notification() asm "0x7bdd97de PUSHINT";
+
+int get_op_code() impure method_id {
+    return op::burn_notification();
+}
+
